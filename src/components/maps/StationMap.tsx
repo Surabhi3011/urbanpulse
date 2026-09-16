@@ -15,6 +15,35 @@ maplibregl.setWorkerUrl(maplibreWorkerUrl);
 const LIGHT_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
+/** CARTO's style JSON declares its vector source as `{ url: ".../tiles.json" }`
+ * -- a TileJSON indirection MapLibre is supposed to resolve itself by
+ * fetching that URL and merging in the `tiles` array it returns. In this
+ * app's environment that resolution silently never completes: the style,
+ * sprite, and the tiles.json itself all fetch fine (confirmed directly),
+ * but the map then never fires `load` and never requests a single map
+ * tile -- it just hangs on a blank canvas with no error. Swapping MapLibre's
+ * own demo style in confirmed the bug is specific to this indirection, not
+ * our map setup, so we resolve it ourselves on the main thread (where plain
+ * `fetch` demonstrably works) before ever constructing the Map. */
+async function resolveCartoStyle(styleUrl: string): Promise<maplibregl.StyleSpecification> {
+  const style = await fetch(styleUrl).then((r) => r.json());
+  await Promise.all(
+    Object.entries(style.sources as Record<string, any>).map(async ([id, source]) => {
+      if (source?.type === "vector" && typeof source.url === "string") {
+        const tilejson = await fetch(source.url).then((r) => r.json());
+        style.sources[id] = {
+          type: "vector",
+          tiles: tilejson.tiles,
+          minzoom: tilejson.minzoom,
+          maxzoom: tilejson.maxzoom,
+          attribution: tilejson.attribution,
+        };
+      }
+    })
+  );
+  return style;
+}
+
 export interface MapStation extends Station {
   /** Activity value under the current filters (may differ from total_activity). */
   filteredActivity: number;
@@ -102,39 +131,60 @@ export function StationMap({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: prefersDark ? DARK_STYLE : LIGHT_STYLE,
-      center: [-73.97, 40.75],
-      zoom: 11.5,
-      pitch: 0,
-      attributionControl: { compact: true },
-    });
+    let cancelled = false;
+    let resizeObserver: ResizeObserver | null = null;
 
-    if (stations.length > 0) {
-      // Use the 2nd-98th percentile rather than raw min/max so a handful of
-      // outlier stations (e.g. far edges of the system) don't zoom out the
-      // default view for everyone else.
-      const percentile = (values: number[], p: number) => {
-        const sorted = [...values].sort((a, b) => a - b);
-        return sorted[Math.floor((sorted.length - 1) * p)];
-      };
-      const lngs = stations.map((s) => s.lng);
-      const lats = stations.map((s) => s.lat);
-      map.fitBounds(
-        [
-          [percentile(lngs, 0.02), percentile(lats, 0.02)],
-          [percentile(lngs, 0.98), percentile(lats, 0.98)],
-        ],
-        { padding: 24, duration: 0 }
-      );
-    }
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
-    mapRef.current = map;
-    popupRef.current = new maplibregl.Popup({ closeButton: false, offset: 10 });
+    (async () => {
+      let style: maplibregl.StyleSpecification;
+      try {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        style = await resolveCartoStyle(prefersDark ? DARK_STYLE : LIGHT_STYLE);
+      } catch (err) {
+        console.error("UrbanPulse: failed to load the map basemap style.", err);
+        return;
+      }
+      if (cancelled || !containerRef.current) return;
 
-    map.on("load", () => {
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style,
+        center: [-73.97, 40.75],
+        zoom: 11.5,
+        pitch: 0,
+        attributionControl: { compact: true },
+      });
+
+      if (stations.length > 0) {
+        // Use the 2nd-98th percentile rather than raw min/max so a handful of
+        // outlier stations (e.g. far edges of the system) don't zoom out the
+        // default view for everyone else.
+        const percentile = (values: number[], p: number) => {
+          const sorted = [...values].sort((a, b) => a - b);
+          return sorted[Math.floor((sorted.length - 1) * p)];
+        };
+        const lngs = stations.map((s) => s.lng);
+        const lats = stations.map((s) => s.lat);
+        map.fitBounds(
+          [
+            [percentile(lngs, 0.02), percentile(lats, 0.02)],
+            [percentile(lngs, 0.98), percentile(lats, 0.98)],
+          ],
+          { padding: 24, duration: 0 }
+        );
+      }
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+      mapRef.current = map;
+      popupRef.current = new maplibregl.Popup({ closeButton: false, offset: 10 });
+
+      // The container sits inside a CSS grid whose column width can still be
+      // settling (sidebar content, fonts, etc.) after this effect runs, so
+      // MapLibre's internal viewport can end up stale relative to the actual
+      // laid-out size. MapLibre only auto-resizes on window resize, not on
+      // layout-driven container resizes, so watch the container directly.
+      resizeObserver = new ResizeObserver(() => map.resize());
+      resizeObserver.observe(containerRef.current);
+
+      map.on("load", () => {
       map.addSource("stations", { type: "geojson", data: stationsToGeoJSON(stations) });
       map.addSource("stations-3d", { type: "geojson", data: stations3DToGeoJSON(stations) });
       map.addSource("routes", { type: "geojson", data: routesToGeoJSON(routes) });
@@ -225,11 +275,14 @@ export function StationMap({
       map.on("mouseenter", "stations-3d-fill", handleEnter);
       map.on("mouseleave", "stations-3d-fill", handleLeave);
 
-      loadedRef.current = true;
-    });
+        loadedRef.current = true;
+      });
+    })();
 
     return () => {
-      map.remove();
+      cancelled = true;
+      resizeObserver?.disconnect();
+      mapRef.current?.remove();
       mapRef.current = null;
       loadedRef.current = false;
     };
