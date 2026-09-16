@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* Neutral surface scale */
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f8fa;
+  --color-surface-raised: #ffffff;
+  --color-border: #e4e7ec;
+  --color-border-strong: #d0d5dd;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475467;
+  --color-text-muted: #98a2b3;
+
+  /* Single restrained accent, used for primary metrics/actions/focus */
+  --color-accent: #2563eb;
+  --color-accent-subtle: #eff4ff;
+  --color-accent-strong: #1d4ed8;
+
+  /* Semantic status colors -- never the sole encoding of meaning */
+  --color-positive: #16a34a;
+  --color-negative: #dc2626;
+  --color-warning: #d97706;
+
+  /* Fixed categorical palette, reused everywhere member/casual or bike-type appears */
+  --color-cat-member: #2563eb;
+  --color-cat-casual: #f97316;
+  --color-cat-classic: #0891b2;
+  --color-cat-electric: #7c3aed;
+  --color-cat-docked: #64748b;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-surface: #0b0f19;
+    --color-surface-subtle: #111827;
+    --color-surface-raised: #161d2c;
+    --color-border: #232a3b;
+    --color-border-strong: #313a4f;
+
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #94a3b8;
+    --color-text-muted: #64748b;
+
+    --color-accent: #5b8def;
+    --color-accent-subtle: #16223d;
+    --color-accent-strong: #7ba4f4;
+
+    --color-positive: #4ade80;
+    --color-negative: #f87171;
+    --color-warning: #fbbf24;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #111;
+  }
+  header nav,
+  footer {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  a[href]::after {
+    content: none !important;
+  }
+}
+
