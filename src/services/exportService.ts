@@ -40,7 +40,7 @@ function downloadBlob(content: BlobPart, filename: string, type: string) {
 }
 
 /** Exports the currently filtered daily metrics as CSV, with the applied
- * filters recorded in a header block above the data (intent.md 13). */
+ * filters recorded in a header block above the data. */
 export function exportDailyMetricsCsv(daily: DailyPoint[], filters: FilterState) {
   const header = filterSummaryRows(filters).map(([k, v]) => [`# ${k}:`, v]);
   const rows: (string | number)[][] = [
@@ -63,7 +63,7 @@ export interface ExcelExportInput {
 }
 
 /** Builds and downloads a multi-sheet Excel workbook reflecting the current
- * filter state (intent.md 13: Filter Summary, KPI Summary, Daily Metrics,
+ * filter state (Filter Summary, KPI Summary, Daily Metrics,
  * Station Metrics, Route Metrics, Anomalies, Forecast). SheetJS is
  * dynamically imported here since it's only needed for this one action. */
 export async function exportExcelWorkbook(input: ExcelExportInput) {

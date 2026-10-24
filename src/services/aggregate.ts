@@ -217,7 +217,7 @@ export function filterRoutes(routes: RouteMetric[], f: FilterState): RouteMetric
 }
 
 // ---------------------------------------------------------------------------
-// Period comparisons (intent.md section 9)
+// Period comparisons
 // ---------------------------------------------------------------------------
 
 export interface Comparison {

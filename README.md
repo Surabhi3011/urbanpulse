@@ -90,6 +90,10 @@ No environment variables or API keys are needed.
 
 The Excel export uses SheetJS (`xlsx`), which has a known advisory about parsing untrusted files. UrbanPulse only writes spreadsheets and never reads uploaded ones, so the advisory does not apply.
 
+## Licence
+
+Code is released under the [MIT Licence](LICENSE). Trip data © Citi Bike / Lyft, used under the [NYCBS Data Use Policy](https://citibikenyc.com/data-sharing-policy).
+
 ---
 
-Built by Surabhi Gupta. Data © Citi Bike / Lyft, used under the [NYCBS Data Use Policy](https://citibikenyc.com/data-sharing-policy).
+Built by Surabhi Gupta.
