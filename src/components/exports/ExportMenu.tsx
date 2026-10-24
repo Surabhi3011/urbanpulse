@@ -5,9 +5,8 @@ import { computeKpis, dailyTotals, filterTemporalCube } from "../../services/agg
 import { exportDailyMetricsCsv, exportExcelWorkbook } from "../../services/exportService";
 
 /** CSV/Excel/print export controls. Every export reflects the current
- * global filter state (intent.md 13). Printing uses the print stylesheet
- * (index.css) rather than a client-side PDF library, per intent.md's
- * explicit fallback allowance. */
+ * global filter state. Printing uses the print stylesheet
+ * (index.css) rather than a client-side PDF library. */
 export function ExportMenu() {
   const { temporalCube, stations, routes, anomalies, forecasts } = useUrbanPulseData();
   const filters = useFilterStore();

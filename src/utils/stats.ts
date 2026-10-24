@@ -36,7 +36,7 @@ export function percentile(sortedValues: number[], p: number): number {
 }
 
 /** Pearson correlation coefficient. Association only -- callers must not
- * present this as causation (see intent.md's data-integrity rules). */
+ * present this as causation. */
 export function pearsonCorrelation(xs: number[], ys: number[]): number | null {
   const n = xs.length;
   if (n < 2) return null;
